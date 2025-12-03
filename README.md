@@ -136,6 +136,8 @@ learning-terraform/
 
 ## 🔄 Deployment Workflow
 
+![Alt text](workflow_status.png)
+
 ### Master Node Setup (`k8s-master.sh`)
 
 1. **System Preparation**
