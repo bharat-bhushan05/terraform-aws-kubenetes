@@ -80,7 +80,7 @@ Type `yes` when prompted.
 **Deployment Time**: ~12-15 minutes
 - Master setup: 7-10 minutes
 - Worker join: 2-3 minutes
-
+![Alt text](nodes_status.png)
 ### 4. Access the Cluster
 
 Get the master node public IP from Terraform output:
