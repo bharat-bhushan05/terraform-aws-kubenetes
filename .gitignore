@@ -1,0 +1,96 @@
+# Terraform files
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform/
+.terraform.lock.hcl
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# SSH Keys - IMPORTANT: Never commit private keys!
+*.pem
+*.key
+id_rsa
+id_rsa.pub
+*.ppk
+
+# Kubernetes config files
+*.kubeconfig
+kubeconfig
+admin.conf
+
+# Join command files (contains sensitive tokens)
+join-command.sh
+*join-command*
+
+# Log files
+*.log
+logs/
+*.out
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Backup files
+*.bak
+*.backup
+*.tmp
+*~
+
+# Compressed files
+*.zip
+*.tar.gz
+*.rar
+
+# Local environment files
+.env
+.env.local
+.env.*.local
+
+# Terraform module cache
+.terraform.d/
+
+# AWS credentials (if accidentally placed in project)
+credentials
+config
+*.credentials
+
+# Certificate files
+*.crt
+*.cert
+*.cer
+*.p12
+*.pfx
+
+# Sensitive data
+secrets/
+*.secret
