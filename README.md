@@ -80,7 +80,9 @@ Type `yes` when prompted.
 **Deployment Time**: ~12-15 minutes
 - Master setup: 7-10 minutes
 - Worker join: 2-3 minutes
-![Alt text](nodes_status.png)
+  
+
+
 ### 4. Access the Cluster
 
 Get the master node public IP from Terraform output:
@@ -88,12 +90,15 @@ Get the master node public IP from Terraform output:
 ```bash
 ssh -i k8s-key.pem ubuntu@<MASTER_PUBLIC_IP>
 
+![Alt text](key_pair.png)
+
 # Set KUBECONFIG
 export KUBECONFIG=/etc/kubernetes/admin.conf
 
 # Verify cluster
 kubectl get nodes
 ```
+![Alt text](nodes_status.png)
 
 **Expected Output**:
 ```
@@ -183,6 +188,7 @@ terraform output
 # master_public_ip = "x.x.x.x"
 # worker_public_ips = ["y.y.y.y", "z.z.z.z"]
 ```
+![Alt text](aws_console.png)
 
 ### Checkpoint 2: Master Node Ready
 
