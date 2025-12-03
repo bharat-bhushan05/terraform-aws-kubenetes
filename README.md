@@ -1,93 +1,66 @@
-# Kubernetes Cluster on AWS with Terraform
+# Automated Kubernetes Cluster on AWS
 
-This project automates the deployment of a production-ready Kubernetes cluster on AWS using Terraform. The cluster consists of 1 master node and 2 worker nodes, with Cilium as the CNI (Container Network Interface) plugin.
+Automated deployment of a production-ready Kubernetes cluster on AWS using Terraform, kubeadm, and Calico CNI.
 
-## Architecture
+## 🎯 Overview
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         AWS VPC                              │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │                    Public Subnet                       │  │
-│  │                                                        │  │
-│  │  ┌──────────────┐                                     │  │
-│  │  │              │                                     │  │
-│  │  │ K8s Master   │  ← Cilium CNI                      │  │
-│  │  │ (t3.medium)  │  ← Control Plane                   │  │
-│  │  │              │                                     │  │
-│  │  └──────┬───────┘                                     │  │
-│  │         │                                             │  │
-│  │         │ Join Command                                │  │
-│  │         ├──────────────┬──────────────┐              │  │
-│  │         │              │              │              │  │
-│  │  ┌──────▼──────┐ ┌────▼──────┐ ┌────▼──────┐       │  │
-│  │  │             │ │           │ │           │       │  │
-│  │  │ K8s Worker  │ │K8s Worker │ │           │       │  │
-│  │  │ 1           │ │2          │ │           │       │  │
-│  │  │ (t3.medium) │ │(t3.medium)│ │           │       │  │
-│  │  │             │ │           │ │           │       │  │
-│  │  └─────────────┘ └───────────┘ └───────────┘       │  │
-│  │                                                        │  │
-│  └───────────────────────────────────────────────────────┘  │
-│                                                              │
-│  Internet Gateway                                            │
-└─────────────────────────────────────────────────────────────┘
-```
+This project provisions a fully functional Kubernetes cluster with:
+- **1 Master Node** (control-plane) - t3.medium
+- **2 Worker Nodes** - t3.medium
+- **Calico CNI** for pod networking
+- **Automatic worker join** via HTTP-based self-service mechanism
+- **Complete automation** - no manual intervention required
 
-## Features
+## 📋 Prerequisites
 
-- ✅ **Automated Cluster Setup**: Complete Kubernetes cluster deployment with one command
-- ✅ **Cilium CNI**: Modern eBPF-based networking and security
-- ✅ **High Availability Ready**: Architecture supports scaling to multiple masters
-- ✅ **Security Groups**: Properly configured firewall rules for master and worker nodes
-- ✅ **Automatic Node Join**: Workers automatically join the cluster using kubeadm
-- ✅ **Version Pinning**: Kubernetes v1.30.3 with version-locked components
+- **Terraform** v1.0+ ([Download](https://www.terraform.io/downloads))
+- **AWS Account** with appropriate permissions
+- **AWS CLI** configured with credentials
+- **SSH Key Pair** for EC2 access
 
-## Prerequisites
-
-- **Terraform**: v1.0 or higher
-- **AWS Account**: With appropriate permissions to create VPC, EC2, and networking resources
-- **AWS CLI**: Configured with credentials
-- **SSH Client**: For accessing nodes (optional, for troubleshooting)
-
-## Project Structure
+## 🏗️ Architecture
 
 ```
-learning-terraform/
-├── main.tf                    # Root module - orchestrates all resources
-├── variables.tf               # Input variables
-├── outputs.tf                 # Output values (optional)
-├── terraform.tfvars          # Variable values (create this)
-├── k8s-key.pem               # SSH private key (auto-generated)
-├── README.md                 # This file
-│
-└── modules/
-    ├── vpc/                  # VPC and networking
-    │   ├── main.tf
-    │   └── output.tf
-    │
-    ├── sec_group/            # Security groups
-    │   ├── main.tf
-    │   └── outputs.tf
-    │
-    ├── key_pair/             # SSH key pair
-    │   ├── main.tf
-    │   └── outputs.tf
-    │
-    └── ec2/                  # EC2 instances and setup scripts
-        ├── main.tf
-        ├── outputs.tf
-        ├── k8s-master.sh     # Master node initialization script
-        ├── k8s-worker.sh     # Worker node setup script
-        └── join-command.sh   # Generated join command (auto-created)
+┌─────────────────────────────────────────────────────┐
+│                    VPC (10.0.0.0/16)                │
+│  ┌───────────────────────────────────────────────┐  │
+│  │         Subnet (10.0.1.0/24)                  │  │
+│  │                                               │  │
+│  │  ┌──────────────┐                            │  │
+│  │  │ Master Node  │  HTTP Server :8080         │  │
+│  │  │ k8s-master-1 │  ────────────────┐         │  │
+│  │  │ 10.0.1.X     │                  │         │  │
+│  │  └──────────────┘                  │         │  │
+│  │         │                           │         │  │
+│  │         │ Calico CNI                │         │  │
+│  │         │ (192.168.0.0/16)          │         │  │
+│  │         │                           │         │  │
+│  │  ┌──────┴────────┐           ┌─────▼──────┐  │  │
+│  │  │  Worker-1     │           │  Worker-2  │  │  │
+│  │  │ k8s-worker-1  │           │k8s-worker-2│  │  │
+│  │  │ 10.0.1.Y      │           │ 10.0.1.Z   │  │  │
+│  │  └───────────────┘           └────────────┘  │  │
+│  └───────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────┘
 ```
 
-## Quick Start
+### Network Configuration
 
-### 1. Clone and Navigate
+| Component | CIDR | Purpose |
+|-----------|------|---------|
+| VPC | 10.0.0.0/16 | AWS Virtual Private Cloud |
+| Subnet | 10.0.1.0/24 | EC2 instance network |
+| Pod Network | 192.168.0.0/16 | Kubernetes pod IPs (Calico) |
+
+## 🚀 Quick Start
+
+### 1. Clone and Configure
 
 ```bash
-cd learning-terraform
+cd c:\Users\Bharat Bhushan\Documents\Terraform\learning-terraform
+
+# Review and update variables if needed
+# Edit terraform.tfvars or use default values
 ```
 
 ### 2. Initialize Terraform
@@ -96,315 +69,382 @@ cd learning-terraform
 terraform init
 ```
 
-### 3. Review the Plan
-
-```bash
-terraform plan
-```
-
-### 4. Deploy the Cluster
+### 3. Deploy the Cluster
 
 ```bash
 terraform apply
 ```
 
-Type `yes` when prompted. The deployment takes approximately **15-20 minutes**.
+Type `yes` when prompted.
 
-### 5. Access the Cluster
+**Deployment Time**: ~12-15 minutes
+- Master setup: 7-10 minutes
+- Worker join: 2-3 minutes
 
-After deployment completes, SSH into the master node:
+### 4. Access the Cluster
+
+Get the master node public IP from Terraform output:
 
 ```bash
-# Get the master node public IP from Terraform output or AWS console
 ssh -i k8s-key.pem ubuntu@<MASTER_PUBLIC_IP>
 
-# Verify cluster status
+# Set KUBECONFIG
+export KUBECONFIG=/etc/kubernetes/admin.conf
+
+# Verify cluster
 kubectl get nodes
-
-# Check all pods
-kubectl get pods -A
-
-# Verify Cilium
-cilium status
 ```
 
-## What Gets Deployed
+**Expected Output**:
+```
+NAME            STATUS   ROLES           AGE   VERSION
+k8s-master-1    Ready    control-plane   10m   v1.30.3
+k8s-worker-1    Ready    <none>          8m    v1.30.3
+k8s-worker-2    Ready    <none>          8m    v1.30.3
+```
 
-### Master Node
-- **Instance Type**: t3.medium (2 vCPU, 4GB RAM)
-- **Components**:
-  - Kubernetes control plane (API server, controller manager, scheduler)
-  - etcd (cluster state database)
-  - Cilium CNI plugin
-  - kubelet, kubeadm, kubectl v1.30.3
-  - containerd runtime
+## 📁 Project Structure
 
-### Worker Nodes (x2)
-- **Instance Type**: t3.medium (2 vCPU, 4GB RAM)
-- **Components**:
-  - kubelet, kubeadm, kubectl v1.30.3
-  - containerd runtime
-  - Automatically joins cluster via kubeadm
+```
+learning-terraform/
+├── main.tf                 # Root module
+├── variables.tf            # Input variables
+├── outputs.tf              # Output values
+├── terraform.tfvars        # Variable values
+├── k8s-key.pem            # SSH private key (generated)
+├── modules/
+│   ├── vpc/
+│   │   ├── main.tf        # VPC, subnet, IGW, route table
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   ├── sec_group/
+│   │   ├── main.tf        # Security groups for master & workers
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   └── ec2/
+│       ├── main.tf        # EC2 instances
+│       ├── variables.tf
+│       ├── outputs.tf
+│       ├── k8s-master.sh  # Master node setup script
+│       └── k8s-worker.sh  # Worker node setup script
+```
 
-### Networking
-- **VPC**: 10.0.0.0/16
-- **Subnet**: 10.0.1.0/24 (public)
-- **Pod Network**: 192.168.0.0/16 (Cilium)
-- **Security Groups**: 
-  - Master: Ports 6443, 2379-2380, 10250-10252
-  - Worker: Ports 10250, 30000-32767
-
-## Configuration
+## 🔄 Deployment Workflow
 
 ### Master Node Setup (`k8s-master.sh`)
 
-The master initialization script performs:
-1. System updates and prerequisite installation
-2. Containerd installation and configuration
-3. Kubernetes components installation (v1.30.3)
-4. Cluster initialization with `kubeadm init`
-5. Cilium CNI installation
-6. Join command generation for workers
+1. **System Preparation**
+   - Update packages
+   - Install containerd runtime
+   - Configure kernel modules and sysctl
+
+2. **Kubernetes Installation**
+   - Install kubeadm, kubelet, kubectl (v1.30.3)
+   - Install crictl
+
+3. **Cluster Initialization**
+   ```bash
+   kubeadm init --pod-network-cidr=192.168.0.0/16 --node-name=k8s-master-1
+   ```
+
+4. **Calico CNI Installation**
+   ```bash
+   kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/calico.yaml
+   ```
+
+5. **Join Command Distribution**
+   - Generate join command: `kubeadm token create --print-join-command`
+   - Save to: `/tmp/join-command.sh`
+   - Start HTTP server: `python3 -m http.server 8080 --bind 0.0.0.0`
 
 ### Worker Node Setup (`k8s-worker.sh`)
 
-The worker setup script performs:
-1. System updates and prerequisite installation
-2. Containerd installation and configuration
-3. Kubernetes components installation (v1.30.3)
-4. Automatic cluster join using the join command from master
+1. **System Preparation**
+   - Same as master (containerd, kernel modules, etc.)
 
-## Deployment Flow
+2. **Kubernetes Installation**
+   - Install kubeadm, kubelet, kubectl, crictl
 
-```mermaid
-sequenceDiagram
-    participant T as Terraform
-    participant M as Master Node
-    participant W as Worker Nodes
-    
-    T->>M: Create EC2 instance
-    M->>M: Run k8s-master.sh
-    M->>M: Install K8s + Cilium
-    M->>M: Output "setup complete"
-    T->>M: SSH: kubeadm token create
-    M->>T: Return join command
-    T->>W: Create worker instances
-    W->>W: Run k8s-worker.sh
-    W->>W: Install K8s components
-    W->>M: Execute join command
-    M->>W: Accept worker join
-    W->>M: Cluster ready
-```
+3. **Automatic Cluster Join**
+   - Poll master HTTP server: `http://<master-ip>:8080/join-command.sh`
+   - Retry every 10 seconds (max 60 attempts = 10 minutes)
+   - Execute join command when available
+   - Join cluster automatically
 
-## Verification
+## ✅ Verification Checkpoints
 
-### Check Node Status
+### Checkpoint 1: Terraform Apply Success
 
 ```bash
-kubectl get nodes -o wide
+# Check Terraform output
+terraform output
+
+# Should show:
+# master_public_ip = "x.x.x.x"
+# worker_public_ips = ["y.y.y.y", "z.z.z.z"]
 ```
 
-Expected output:
-```
-NAME           STATUS   ROLES           AGE   VERSION
-k8s-master     Ready    control-plane   10m   v1.30.3
-k8s-worker-1   Ready    <none>          5m    v1.30.3
-k8s-worker-2   Ready    <none>          5m    v1.30.3
-```
-
-### Check System Pods
+### Checkpoint 2: Master Node Ready
 
 ```bash
-kubectl get pods -A
+ssh -i k8s-key.pem ubuntu@<MASTER_PUBLIC_IP>
+export KUBECONFIG=/etc/kubernetes/admin.conf
+
+# Check master status
+kubectl get nodes
+# k8s-master-1 should show "Ready"
+
+# Check master setup log
+tail -50 /var/log/k8s-master-setup.log
+# Should end with "HTTP server started"
 ```
 
-All pods in `kube-system` namespace should be `Running`.
-
-### Verify Cilium
+### Checkpoint 3: Calico Running
 
 ```bash
-cilium status
+# Check Calico pods
+kubectl get pods -n kube-system | grep calico
+
+# Expected output:
+# calico-kube-controllers-xxx   1/1     Running
+# calico-node-xxx               1/1     Running  (one per node)
 ```
 
-Should show all components as "OK".
+### Checkpoint 4: HTTP Server Active
+
+```bash
+# Check HTTP server
+ps aux | grep "python3 -m http.server"
+
+# Test locally
+curl http://localhost:8080/join-command.sh
+# Should return the kubeadm join command
+```
+
+### Checkpoint 5: Workers Joined
+
+```bash
+# Watch workers join
+kubectl get nodes --watch
+
+# All nodes should show "Ready" within 2-3 minutes
+```
+
+### Checkpoint 6: Network Routing
+
+```bash
+# Verify no routing conflicts
+ip route show | grep "10.0.1"
+
+# Should only show:
+# 10.0.1.0/24 dev ens5 proto kernel scope link src 10.0.1.X
+# (NO Calico routes for 10.0.1.0/24)
+```
+
+## 🧪 Testing the Cluster
 
 ### Deploy Test Application
 
 ```bash
-# Create a test deployment
+# Create nginx deployment
 kubectl create deployment nginx --image=nginx --replicas=3
 
-# Expose it
+# Expose as NodePort service
 kubectl expose deployment nginx --port=80 --type=NodePort
 
-# Check pods distribution
+# Check pod distribution
 kubectl get pods -o wide
+# Pods should be distributed across all nodes
 
 # Get service details
 kubectl get svc nginx
+# Note the NodePort (e.g., 30080)
+
+# Test access (from master)
+curl http://localhost:<NodePort>
 ```
 
-## Troubleshooting
-
-### Master Node Logs
+### Verify Pod Networking
 
 ```bash
-ssh -i k8s-key.pem ubuntu@<MASTER_IP>
-tail -f /var/log/k8s-master-setup.log
+# Get pod IPs
+kubectl get pods -o wide
+
+# Exec into a pod
+kubectl exec -it <pod-name> -- /bin/bash
+
+# Ping another pod
+ping <another-pod-ip>
+# Should work (Calico networking)
 ```
 
-### Worker Node Logs
+## 🔧 Troubleshooting
 
+### Workers Not Joining
+
+**Check worker logs**:
 ```bash
-ssh -i k8s-key.pem ubuntu@<WORKER_IP>
-tail -f /var/log/k8s-worker-setup.log
+ssh -i k8s-key.pem ubuntu@<WORKER_PUBLIC_IP>
+tail -100 /var/log/k8s-worker-setup.log
 ```
 
-### Common Issues
+**Look for**:
+- "Successfully fetched join command from master!"
+- "Successfully joined the cluster!"
 
-#### Workers Not Joining
+**If stuck**, check:
+1. Master HTTP server is running
+2. Security group allows port 8080
+3. Workers can reach master IP
 
-1. Check if join command was generated:
-   ```bash
-   cat modules/ec2/join-command.sh
-   ```
+### Nodes Show NotReady
 
-2. Manually join if needed:
-   ```bash
-   # On master
-   sudo kubeadm token create --print-join-command
-   
-   # Copy output and run on worker
-   sudo <join-command>
-   ```
+**Check Calico**:
+```bash
+kubectl get pods -n kube-system | grep calico
+# All should be Running
 
-#### Cilium Not Installing
+# Check specific pod logs
+kubectl logs -n kube-system <calico-pod-name>
+```
 
-1. Check KUBECONFIG is set:
-   ```bash
-   export KUBECONFIG=/etc/kubernetes/admin.conf
-   cilium status
-   ```
+**Check kubelet**:
+```bash
+# On the NotReady node
+sudo systemctl status kubelet
+sudo journalctl -u kubelet -n 50
+```
 
-2. Reinstall if needed:
-   ```bash
-   cilium install
-   cilium status --wait
-   ```
+### Routing Conflicts
 
-#### Pods Not Starting
+**Symptom**: Nodes go Ready → NotReady
 
-1. Check kubelet status:
-   ```bash
-   sudo systemctl status kubelet
-   sudo journalctl -u kubelet -f
-   ```
+**Check routes**:
+```bash
+ip route show | grep "10.0.1"
+```
 
-2. Check containerd:
-   ```bash
-   sudo systemctl status containerd
-   ```
+**If you see Calico routes for 10.0.1.0/24**, the pod CIDR is conflicting. Verify:
+```bash
+kubectl get nodes -o jsonpath='{.items[0].spec.podCIDR}'
+# Should be 192.168.x.x, NOT 10.0.1.x
+```
 
-## Cleanup
+## 🧹 Cleanup
 
-To destroy all resources:
+### Destroy the Cluster
 
 ```bash
 terraform destroy
 ```
 
-Type `yes` when prompted. This will delete:
+Type `yes` when prompted.
+
+**This will delete**:
 - All EC2 instances
+- VPC and networking resources
 - Security groups
-- VPC and networking components
-- SSH key pair
 
-**Note**: The local `k8s-key.pem` file will remain - delete it manually if needed.
+**Note**: The SSH key file (`k8s-key.pem`) will remain on your local machine.
 
-## Cost Estimation
+## 💰 Cost Estimation
 
-Approximate AWS costs (us-east-1 region):
-- **Master Node** (t3.medium): ~$0.0416/hour
-- **Worker Nodes** (2x t3.medium): ~$0.0832/hour
-- **Data Transfer**: Minimal for testing
-- **Total**: ~$0.125/hour or **~$90/month** if running 24/7
+| Resource | Type | Quantity | Cost/Hour | Cost/Month |
+|----------|------|----------|-----------|------------|
+| Master | t3.medium | 1 | $0.0416 | ~$30 |
+| Workers | t3.medium | 2 | $0.0832 | ~$60 |
+| **Total** | | | **$0.1248** | **~$90** |
 
-**Recommendation**: Destroy resources when not in use to minimize costs.
+*Costs are approximate and may vary by region.*
 
-## Customization
+## 🔐 Security Considerations
+
+### Security Groups
+
+**Master Node**:
+- SSH (22): Open to 0.0.0.0/0
+- API Server (6443): Open to 0.0.0.0/0
+- HTTP Server (8080): VPC only (10.0.0.0/16)
+- Kubelet (10250): VPC only
+- All traffic from VPC: Allowed
+
+**Worker Nodes**:
+- SSH (22): Open to 0.0.0.0/0
+- Kubelet (10250): VPC only
+- NodePort (30000-32767): Open to 0.0.0.0/0
+- All traffic from VPC: Allowed
+
+### Best Practices
+
+1. **Restrict SSH**: Change security group to allow SSH only from your IP
+2. **Use Bastion Host**: For production, use a bastion host for SSH access
+3. **Enable RBAC**: Kubernetes RBAC is enabled by default
+4. **Rotate Tokens**: Kubeadm tokens expire after 24 hours
+5. **Use TLS**: All Kubernetes components use TLS
+
+## 📚 Key Features
+
+### ✅ Fully Automated
+- No manual intervention required
+- Workers join automatically via HTTP
+- Complete setup in ~15 minutes
+
+### ✅ Self-Healing
+- Workers retry join if master not ready
+- Robust error handling with `|| true`
+- Detailed logging for troubleshooting
+
+### ✅ Production-Ready
+- Calico CNI for reliable networking
+- No routing conflicts with VPC
+- Proper pod CIDR configuration
+
+### ✅ Simple & Clean
+- No complex Terraform provisioners
+- HTTP-based join mechanism
+- Easy to understand and modify
+
+## 🛠️ Customization
 
 ### Change Instance Types
 
-Edit `modules/ec2/main.tf`:
+Edit `terraform.tfvars`:
 ```hcl
-instance_type = "t3.large"  # Change from t3.medium
+master_instance_type = "t3.large"
+worker_instance_type = "t3.large"
 ```
 
-### Add More Workers
+### Change Worker Count
 
 Edit `modules/ec2/main.tf`:
 ```hcl
 resource "aws_instance" "k8s_worker" {
-  count = 3  # Change from 2
+  count = 3  # Change from 2 to 3
   ...
 }
 ```
 
 ### Change Kubernetes Version
 
-Edit both `k8s-master.sh` and `k8s-worker.sh`:
+Edit `k8s-master.sh` and `k8s-worker.sh`:
 ```bash
 sudo apt-get install -y kubelet=1.31.0-1.1 kubeadm=1.31.0-1.1 kubectl=1.31.0-1.1
 ```
 
-And in `k8s-master.sh`:
-```bash
-sudo kubeadm init --kubernetes-version 1.31.0 ...
-```
-
-## Security Considerations
-
-- 🔒 **SSH Keys**: Keep `k8s-key.pem` secure and never commit to version control
-- 🔒 **Security Groups**: Currently allows all traffic within VPC - restrict as needed
-- 🔒 **Public IPs**: Nodes have public IPs for easy access - use private subnets for production
-- 🔒 **RBAC**: Configure Kubernetes RBAC for production workloads
-- 🔒 **Secrets**: Use AWS Secrets Manager or Kubernetes secrets for sensitive data
-
-## Next Steps
-
-1. **Install Ingress Controller**: 
-   ```bash
-   kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
-   ```
-
-2. **Install Metrics Server**:
-   ```bash
-   kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
-   ```
-
-3. **Setup Monitoring**: Install Prometheus and Grafana
-
-4. **Configure Storage**: Setup persistent volumes with AWS EBS
-
-5. **CI/CD Integration**: Connect to GitHub Actions or Jenkins
-
-## References
+## 📖 Additional Resources
 
 - [Kubernetes Documentation](https://kubernetes.io/docs/)
-- [Cilium Documentation](https://docs.cilium.io/)
+- [Calico Documentation](https://docs.tigera.io/calico/latest/about/)
 - [Terraform AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
 - [kubeadm Documentation](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/)
 
-## License
+## 🤝 Contributing
 
-This project is for educational purposes.
+Feel free to submit issues and enhancement requests!
 
-## Support
+## 📝 License
 
-For issues or questions:
-1. Check the troubleshooting section above
-2. Review logs on master/worker nodes
-3. Consult Kubernetes and Terraform documentation
+This project is open source and available under the MIT License.
 
 ---
 
